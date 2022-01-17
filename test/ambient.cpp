@@ -13,6 +13,9 @@
 
 namespace
 {
+    constexpr float PI = 3.14159265359f;
+
+
     void basis(v3 n, v3* x, v3* y)
     {
         v3 v;
@@ -195,7 +198,7 @@ void AmbientOcclusion::refine()
 
             float cos_theta = 1.0f - rnd.next_float();
             float sin_theta = std::sqrtf(1.0f - cos_theta * cos_theta);
-            float phi       = 2.0f * M_PI * rnd.next_float();
+            float phi       = 2.0f * PI * rnd.next_float();
             float cos_phi   = std::cos(phi);
             float sin_phi   = std::sin(phi);
 

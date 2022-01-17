@@ -17,7 +17,6 @@ else()
     message(STATUS "Embree not found")
 endif()
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(DIR_SOLIDS ${CMAKE_CURRENT_SOURCE_DIR}/solids)
 
 add_subdirectory(bvh)

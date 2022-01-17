@@ -20,7 +20,10 @@ add_executable(test
 )
 
 target_compile_options(test PRIVATE
-    $<$<CXX_COMPILER_ID:AppleClang, Clang, GNU>: -Wall -Wextra -pedantic>
+    $<$<CXX_COMPILER_ID:AppleClang,Clang,GNU>: -Wall -Wextra -pedantic>
+)
+target_compile_definitions(test PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>: _CRT_SECURE_NO_WARNINGS>
 )
 target_compile_features(test PRIVATE cxx_std_20)
 target_compile_definitions(test PRIVATE "DIR_SOLIDS=\"${DIR_SOLIDS}\"")
