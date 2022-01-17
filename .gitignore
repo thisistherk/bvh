@@ -1,0 +1,7 @@
+.cache
+.vscode
+build
+compile_commands.json
+output.bmp
+solids
+
