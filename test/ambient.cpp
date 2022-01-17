@@ -80,6 +80,8 @@ void AmbientOcclusion::begin(Mesh* mesh, bvh::Base* bvh, uint32_t w, uint32_t h,
     // Reset stats
     _stats.primary_timer = Timer();
     _stats.primary_count = 0;
+    _stats.shadow_timer  = Timer();
+    _stats.shadow_count  = 0;
 
     // Camera info
     float scale  = std::tanf(0.5f * camera.fov);
