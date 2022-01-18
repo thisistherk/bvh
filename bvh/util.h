@@ -110,6 +110,23 @@ namespace bvh
         }
     }
 
+    inline float triangle_area(v3 p0, v3 p1, v3 p2)
+    {
+        v3 p01 = p1 - p0;
+        v3 p02 = p2 - p0;
+        v3 cp  = cross(p01, p02);
+        return 0.5f * sqrtf(dot(cp, cp));
+    }
+
+    inline float aabb_area(v3 mn, v3 mx)
+    {
+        v3 delta = mx - mn;
+        if (delta.x < 0.0f)
+            return 0.0f;
+
+        return 2.0f * (delta.x * delta.y + delta.y * delta.z + delta.z * delta.x);
+    }
+
 
     struct WoopRay
     {

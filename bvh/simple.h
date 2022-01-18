@@ -41,7 +41,10 @@ namespace bvh
                 v3 v2(mesh->positions + 3 * mesh->indices[3 * ii + 2]);
 
                 Prim prim;
+                prim.min   = min(v0, min(v1, v2));
+                prim.max   = max(v0, max(v1, v2));
                 prim.mid   = (v0 + v1 + v2) / 3.0f;
+                prim.area  = triangle_area(v0, v1, v2);
                 prim.index = ii;
 
                 prims.push_back(prim);
@@ -71,9 +74,64 @@ namespace bvh
                     // Always split along largest axis
                     v3       delta = vol.max - vol.min;
                     uint32_t axis  = max_dim(delta);
-                    float    split = 0.5f * (vol.min[axis] + vol.max[axis]);
 
                     _nodes[node_index].axis = (uint16_t)(axis);
+
+
+                    // Binned SAH
+                    constexpr uint32_t BINS = 256;
+
+                    float bin_min   = vol.min[axis];
+                    float bin_scale = BINS / (delta[axis] * 1.00001f);
+
+                    Bin bins[BINS];
+                    for (uint32_t ii = vol.first; ii < vol.last; ii++)
+                    {
+                        float    p = prims[ii].mid[axis];
+                        uint32_t b = static_cast<uint32_t>((p - bin_min) * bin_scale);
+
+                        Bin& bin = bins[b];
+
+                        bin.count++;
+                        bin.min = min(bin.min, prims[ii].min);
+                        bin.max = max(bin.max, prims[ii].max);
+                    }
+
+                    bins[BINS - 1].right_count = bins[BINS - 1].count;
+                    bins[BINS - 1].right_min   = bins[BINS - 1].min;
+                    bins[BINS - 1].right_max   = bins[BINS - 1].max;
+
+                    uint32_t ii = BINS - 1;
+                    while (ii > 0)
+                    {
+                        ii--;
+                        bins[ii].right_count = bins[ii + 1].right_count + bins[ii].count;
+                        bins[ii].right_min   = min(bins[ii + 1].right_min, bins[ii].min);
+                        bins[ii].right_max   = max(bins[ii + 1].right_max, bins[ii].max);
+                    }
+
+                    uint32_t left_count = bins[0].count;
+                    v3       left_min   = bins[0].min;
+                    v3       left_max   = bins[0].max;
+
+                    uint32_t best_index = 0;
+                    float    best_sah   = INFINITY;
+                    for (uint32_t ii = 1; ii < BINS; ii++)
+                    {
+                        float sah = left_count * aabb_area(left_min, left_max)
+                                  + bins[ii].right_count * aabb_area(bins[ii].right_min, bins[ii].right_max);
+                        if (sah < best_sah)
+                        {
+                            best_sah   = sah;
+                            best_index = ii;
+                        }
+
+                        left_count += bins[ii].count;
+                        left_min = min(left_min, bins[ii].min);
+                        left_max = max(left_max, bins[ii].max);
+                    }
+
+                    float split = bin_min + best_index / bin_scale;
 
 
                     // Partition primitives
@@ -265,7 +323,10 @@ namespace bvh
 
         struct Prim
         {
+            v3       min;
+            v3       max;
             v3       mid;
+            float    area;
             uint32_t index;
         };
 
@@ -276,6 +337,17 @@ namespace bvh
             uint32_t parent = INVALID;
             v3       min    = {+INFINITY, +INFINITY, +INFINITY};
             v3       max    = {-INFINITY, -INFINITY, -INFINITY};
+        };
+
+        struct Bin
+        {
+            v3       min   = {+INFINITY, +INFINITY, +INFINITY};
+            v3       max   = {-INFINITY, -INFINITY, -INFINITY};
+            float    area  = 0.0f;
+            uint32_t count = 0;
+            v3       right_min;
+            v3       right_max;
+            uint32_t right_count = 0;
         };
 
         struct Node
