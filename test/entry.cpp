@@ -13,8 +13,10 @@
 
 #include "bvh/base.h"
 #include "bvh/embree.h"
+#include "bvh/simple.h"
 
 #include <cstdint>
+#include <memory>
 
 
 namespace
@@ -96,8 +98,10 @@ namespace
     {
         std::unique_ptr<bvh::Base> bvh;
 
+        if (std::strcmp(name, "simple") == 0)
+            bvh = std::make_unique<bvh::Simple>();
 #if defined(BVH_EMBREE)
-        if (std::strcmp(name, "embree") == 0)
+        else if (std::strcmp(name, "embree") == 0)
             bvh = std::make_unique<bvh::Embree>();
         else if (std::strcmp(name, "embree_low") == 0)
             bvh = std::make_unique<bvh::Embree>(RTC_BUILD_QUALITY_LOW);
@@ -105,10 +109,6 @@ namespace
             bvh = std::make_unique<bvh::Embree>(RTC_BUILD_QUALITY_MEDIUM);
         else if (std::strcmp(name, "embree_high") == 0)
             bvh = std::make_unique<bvh::Embree>(RTC_BUILD_QUALITY_HIGH);
-#endif
-#if 0
-        else if (std::strcmp(name, "wald") == 0)
-            bvh = std::make_unique<bvh::Wald>();
 #endif
 
         return bvh;
