@@ -126,7 +126,7 @@ namespace bvh
     inline WoopRay woop_ray(v3 org, v3 dir)
     {
         WoopRay r;
-        
+
         r.org = org;
 
         r.z_index = max_dim(dir);
@@ -187,13 +187,13 @@ namespace bvh
         const float T  = U * Az + V * Bz + W * Cz;
 
         const float rcp_det = 1.0f / det;
-        float t = T * rcp_det;
+        float       t       = T * rcp_det;
         if (t < min_t || t > max_t)
             return false;
 
-        *d = t;
-        bary[0] = U * rcp_det;
-        bary[1] = V * rcp_det;
+        *d      = t;
+        bary[0] = V * rcp_det;
+        bary[1] = W * rcp_det;
 
         return true;
     }
