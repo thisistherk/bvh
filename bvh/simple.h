@@ -73,6 +73,8 @@ namespace bvh
                     uint32_t axis  = max_dim(delta);
                     float    split = 0.5f * (vol.min[axis] + vol.max[axis]);
 
+                    _nodes[node_index].axis = (uint16_t)(axis);
+
 
                     // Partition primitives
                     Volume left;
@@ -100,6 +102,17 @@ namespace bvh
                             --r;
                             std::swap(prims[l], prims[r]);
                         }
+                    }
+
+                    if (l == vol.first || l == vol.last)
+                    {
+                        // Can't split - just do it arbitrarily
+                        l = (vol.first + vol.last) / 2;
+
+                        left.min  = vol.min;
+                        left.max  = vol.max;
+                        right.min = vol.min;
+                        right.max = vol.max;
                     }
 
                     left.first = vol.first;
@@ -152,6 +165,7 @@ namespace bvh
             }
 
 
+            // Propagate bounds from children to parent nodes
             // We know parents always appear in the node list before children, so just walk backwards through the array
             uint32_t idx = static_cast<uint32_t>(_nodes.size());
             while (idx > 0)
@@ -172,7 +186,8 @@ namespace bvh
 
         void trace(uint32_t rays, Ray* input, Hit* output, uint32_t flags) final
         {
-            std::stack<uint32_t> stack;
+            std::vector<uint32_t> stack;
+            stack.reserve(128);
 
             for (uint32_t ii = 0; ii < rays; ii++)
             {
@@ -200,9 +215,18 @@ namespace bvh
                         uint32_t offset = _nodes[node_index].offset;
                         if (count == 0)
                         {
-                            // Descend to children (push right node, then walk to left)
-                            stack.push(offset);
-                            node_index++;
+                            // Descend to children (decide which node to visit first based on ray direction)
+                            uint32_t axis = _nodes[node_index].axis;
+                            if (dir[axis] > 0.0f)
+                            {
+                                stack.push_back(offset);
+                                node_index++;
+                            }
+                            else
+                            {
+                                stack.push_back(node_index + 1);
+                                node_index = offset;
+                            }
                             continue;
                         }
 
@@ -213,15 +237,22 @@ namespace bvh
                             const auto& tri = _triangles[offset + jj];
 
                             if (woop_ray_vs_triangle(wr, min_t, max_t, tri.p0, tri.p1, tri.p2, hit.barycentric, &max_t))
+                            {
                                 hit.triangle = tri.index;
+                                if (flags & TRACE_SHADOW)
+                                {
+                                    stack.clear();
+                                    break;
+                                }
+                            }
                         }
                     }
 
                     if (stack.empty())
                         break;
 
-                    node_index = stack.top();
-                    stack.pop();
+                    node_index = stack[stack.size() - 1];
+                    stack.pop_back();
                 }
 
                 output[ii] = hit;
@@ -252,7 +283,8 @@ namespace bvh
             v3       min    = {+INFINITY, +INFINITY, +INFINITY};
             v3       max    = {-INFINITY, -INFINITY, -INFINITY};
             uint32_t offset = 0;
-            uint32_t count  = 0;
+            uint16_t count  = 0;
+            uint16_t axis   = 0;
         };
 
         struct Triangle
